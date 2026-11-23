@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elegir rol | Casa Forno</title>
+  <script>
+    // Solo el ADMIN llega aquí. Sin sesión -> login; cliente -> su vista.
+    (function () {
+      const s = JSON.parse(sessionStorage.getItem('cf_sesion_cliente') || 'null');
+      if (!s) { window.location.replace('/login'); }
+      else if (s.rol !== 'ADMIN') { window.location.replace('/index'); }
+    })();
+  </script>
+  <div th:replace="fragments/head :: head"></div>
+</head>
+
+<body>
+
+  <div class="auth-body">
+    <div class="auth-page d-flex align-items-center justify-content-center">
+      <div class="auth-card auth-card-wide bg-white rounded-5 text-center">
+
+        <p class="brand-mark brand-mark-ink mb-3">CASA <span>FORNO</span></p>
+        <h1 class="h4 mb-1">¡Hola, <strong id="rolNombre"></strong>!</h1>
+        <p class="text-muted mb-4">¿Con qué rol deseas ingresar?</p>
+
+        <div class="d-flex justify-content-center gap-4 mb-4" role="radiogroup" aria-label="Rol de ingreso">
+
+          <button type="button" class="rol-opcion" data-rol="CLIENTE" role="radio" aria-checked="false">
+            <span class="rol-circulo"><i class="bi bi-person-fill"></i><i class="bi bi-check-circle-fill rol-check"></i></span>
+            <span class="rol-nombre">Cliente</span>
+          </button>
+
+          <button type="button" class="rol-opcion" data-rol="ADMIN" role="radio" aria-checked="false">
+            <span class="rol-circulo"><i class="bi bi-shield-lock-fill"></i><i class="bi bi-check-circle-fill rol-check"></i></span>
+            <span class="rol-nombre">Administrador</span>
+          </button>
+
+        </div>
+
+        <button type="button" class="btn btn-forno px-5" id="btnContinuarRol" disabled>Continuar</button>
+        <div class="mt-3">
+          <a href="#" class="small auth-back" id="btnSalirRol">Cerrar sesión</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script th:src="@{/js/auth.js}"></script>
+  <script th:src="@{/js/rol.js}"></script>
+</body>
+
+</html>

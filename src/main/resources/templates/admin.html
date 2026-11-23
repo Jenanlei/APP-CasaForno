@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración | Casa Forno</title>
+    <script>
+        // Solo entra un ADMIN que eligió el rol "Administrador" en /rol.
+        (function () {
+            const s = JSON.parse(sessionStorage.getItem('cf_sesion_cliente') || 'null');
+            if (!s) { window.location.replace('/login'); }
+            else if (s.rol !== 'ADMIN') { window.location.replace('/index'); }
+            else if (sessionStorage.getItem('cf_rol_activo') !== 'ADMIN') { window.location.replace('/rol'); }
+        })();
+    </script>
+    <div th:replace="fragments/head :: head"></div>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+
+<body class="admin-body">
+
+    <div id="panelWrap">
+
+        <!-- ================= BARRA SUPERIOR (a la derecha: usuario y bloque "Sesión") ================= -->
+        <nav class="navbar admin-nav">
+            <div class="container">
+                <a class="navbar-brand brand-mark" th:href="@{/admin}">CASA <span>FORNO</span>
+                    <small class="admin-tag">admin</small></a>
+                <div class="d-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <button type="button" class="admin-chip" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="admin-avatar" id="chipAvatar">A</span>
+                        <span class="text-start d-none d-sm-block">
+                            <span class="admin-usuario-nombre" id="chipNombre">Administrador</span>
+                            <span class="admin-usuario-rol">Administrador</span>
+                        </span>
+                        <i class="bi bi-chevron-down small"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end admin-sesion-menu">
+                        <p class="admin-sesion-titulo">Sesión</p>
+                        <div class="admin-usuario">
+                            <span class="admin-avatar" id="menuAvatar">A</span>
+                            <span>
+                                <span class="admin-usuario-nombre" id="menuNombre">Administrador</span>
+                                <span class="admin-usuario-rol">Administrador</span>
+                            </span>
+                        </div>
+                        <hr class="dropdown-divider">
+                        <a class="dropdown-item" th:href="@{/}" target="_blank"><i class="bi bi-shop me-2"></i>Ver sitio</a>
+                        <a class="dropdown-item" th:href="@{/rol}"><i class="bi bi-arrow-left-right me-2"></i>Cambiar rol</a>
+                        <button type="button" class="dropdown-item" id="btnLogout"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</button>
+                    </div>
+                </div>
+                <!-- Solo en celular: abre y cierra el menú de secciones -->
+                <button type="button" class="admin-btn-menu d-lg-none" data-bs-toggle="collapse"
+                    data-bs-target="#adminMenu" aria-controls="adminMenu" aria-expanded="false"
+                    aria-label="Abrir menú"><i class="bi bi-list"></i></button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container py-3">
+
+            <!-- Menú de secciones: pestañas en PC; en celular se oculta y se abre con el botón -->
+            <div class="collapse d-lg-block" id="adminMenu">
+                <nav class="admin-tabs" id="adminTabs">
+                    <button type="button" class="admin-tab active" data-seccion="inicio">Inicio</button>
+                    <button type="button" class="admin-tab" data-seccion="productos">Productos</button>
+                    <button type="button" class="admin-tab" data-seccion="categorias">Categorías</button>
+                    <button type="button" class="admin-tab" data-seccion="reservas">Reservas</button>
+                </nav>
+            </div>
+
+            <!-- Encabezado de la sección: título + subtítulo -->
+            <header class="admin-cabecera">
+                <div>
+                    <h1 id="seccionTitulo">Inicio</h1>
+                    <p id="seccionSubtitulo">Resumen de Casa Forno</p>
+                </div>
+
+            </header>
+
+            <main class="admin-contenido">
+
+                <!-- ---- INICIO ---- -->
+                <section class="admin-seccion" id="seccion-inicio">
+                    <div class="admin-banner">
+                        <p class="admin-banner-fecha" id="bannerFecha"></p>
+                        <h2>Hola, <span id="bannerNombre">administrador</span></h2>
+                        <p>Este es el resumen de Casa Forno para hoy.</p>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6 col-xl-3"><div class="admin-stat"><p class="admin-stat-num" id="statProductos">0</p><p>Productos</p></div></div>
+                        <div class="col-sm-6 col-xl-3"><div class="admin-stat"><p class="admin-stat-num" id="statCategorias">0</p><p>Categorías</p></div></div>
+                        <div class="col-sm-6 col-xl-3"><div class="admin-stat"><p class="admin-stat-num" id="statReservasHoy">0</p><p>Reservas de hoy</p></div></div>
+                        <div class="col-sm-6 col-xl-3"><div class="admin-stat"><p class="admin-stat-num" id="statReservasPendientes">0</p><p>Reservas pendientes</p></div></div>
+                    </div>
+                </section>
+
+                <!-- ---- PRODUCTOS ---- -->
+                <section class="admin-seccion d-none" id="seccion-productos">
+                    <div class="d-flex justify-content-end mb-3">
+                        <button class="btn btn-forno" id="btnNuevoProducto"><i class="bi bi-plus-lg me-1"></i>Nuevo
+                            producto</button>
+                    </div>
+                    <!-- Filtros: se aplican sobre lo cargado de MySQL -->
+                    <div class="row g-3 align-items-end mb-3" id="filtrosProductos">
+                        <div class="col-md-4">
+                            <label class="form-label" for="filtroCategoria">Categoría</label>
+                            <select class="form-select" id="filtroCategoria">
+                                <option value="">Todas las categorías</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label" for="buscarProducto">Buscar</label>
+                            <input type="search" class="form-control" id="buscarProducto"
+                                placeholder="Nombre del producto" autocomplete="off">
+                        </div>
+                        <div class="col-md-3">
+                            <p class="text-muted mb-2" id="contadorProductos" aria-live="polite"></p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table admin-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Nombre</th>
+                                    <th>Categoría</th>
+                                    <th>Precio</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaProductos"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ---- CATEGORÍAS ---- -->
+                <section class="admin-seccion d-none" id="seccion-categorias">
+                    <div class="d-flex justify-content-end mb-3">
+                        <button class="btn btn-forno" id="btnNuevaCategoria"><i class="bi bi-plus-lg me-1"></i>Nueva
+                            categoría</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table admin-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Ícono</th>
+                                    <th>Nombre</th>
+                                    <th>ID</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaCategorias"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ---- RESERVAS (vienen de MySQL) ---- -->
+                <section class="admin-seccion d-none" id="seccion-reservas">
+                    <div class="table-responsive">
+                        <table class="table admin-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Hora</th>
+                                    <th>Cliente</th>
+                                    <th>Teléfono</th>
+                                    <th>Personas</th>
+                                    <th>Nota</th>
+                                    <th>Estado</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaReservas"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ============ MODAL PRODUCTO ============ -->
+    <div class="modal fade" id="modalProducto" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formProducto">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalProductoTitulo">Nuevo producto</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="productoId">
+                        <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <select class="form-select" id="productoCategoria" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="productoNombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" id="productoDescripcion" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Precio (S/)</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control" id="productoPrecio" required>
+                        </div>
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">URL de imagen</label>
+                            <input type="url" class="form-control" id="productoImagen" placeholder="https://...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-forno">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL CATEGORÍA ============ -->
+    <div class="modal fade" id="modalCategoria" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formCategoria">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalCategoriaTitulo">Nueva categoría</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="categoriaIdOriginal">
+
+                        <div class="mb-3">
+                            <label class="form-label">ID (sin espacios, minúsculas)</label>
+                            <input type="text" class="form-control" id="categoriaId" pattern="[a-z0-9\-]+" required>
+                            <div class="form-text">Se usa internamente, ej: <code>postres</code></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nombre visible</label>
+                            <input type="text" class="form-control" id="categoriaNombre" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label mb-0">Ícono (Bootstrap Icons)</label>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="offcanvas"
+                                    data-bs-target="#panelIconos">
+                                    <i class="bi bi-grid-3x3-gap-fill me-1"></i> Seleccionar ícono
+                                </button>
+                            </div>
+
+                            <div class="input-group">
+                                <span class="input-group-text"><i id="iconoPreview" class="bi bi-cup-hot"></i></span>
+                                <input type="text" class="form-control" id="categoriaIcono" placeholder="bi-cup-hot"
+                                    required>
+                            </div>
+                            <div class="form-text">Nombre de clase de <a href="https://icons.getbootstrap.com/"
+                                    target="_blank">Bootstrap Icons</a>, ej: <code>bi-cup-hot</code></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="categoriaImagen">Imagen (URL, opcional)</label>
+                            <input type="url" class="form-control" id="categoriaImagen"
+                                placeholder="https://ejemplo.com/foto.jpg">
+                            <div class="form-text">Si la dejas vacía se usa una imagen por defecto.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="categoriaDescripcion">Descripción (opcional)</label>
+                            <input type="text" class="form-control" id="categoriaDescripcion" maxlength="150"
+                                placeholder="Masa madre, horneadas a leña.">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-forno">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="fragments/panelIconos :: panelIconos">panel de Iconos</div>
+
+    <!-- ============ MODAL CONFIRMAR ELIMINAR ============ -->
+    <div class="modal fade" id="modalConfirmar" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar eliminación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmarMensaje" class="mb-0"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/api.js}"></script>
+    <script th:src="@{/js/admin.js}"></script>
+</body>
+
+</html>
